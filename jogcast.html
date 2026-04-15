@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>JogCast</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg: #0a0a0a;
+    --surface: #111111;
+    --border: #222222;
+    --accent: #e8ff47;
+    --accent2: #ff4747;
+    --text: #f0f0f0;
+    --muted: #555555;
+    --radius: 4px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow-x: hidden;
+  }
+
+  /* ── Header ── */
+  header {
+    padding: 18px 20px 12px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+  }
+  header h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2.4rem;
+    letter-spacing: 3px;
+    color: var(--accent);
+    line-height: 1;
+  }
+  header span {
+    font-size: 0.65rem;
+    color: var(--muted);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  /* ── Status bar ── */
+  #status-bar {
+    padding: 8px 20px;
+    font-size: 0.65rem;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    min-height: 32px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  #status-bar .dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--muted);
+    flex-shrink: 0;
+  }
+  #status-bar.loading .dot { background: var(--accent); animation: pulse 1s infinite; }
+  #status-bar.playing .dot { background: var(--accent); }
+  #status-bar.error .dot  { background: var(--accent2); }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.2; }
+  }
+
+  /* ── Player ── */
+  #player-section {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  #now-playing-label {
+    font-size: 0.6rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  #now-playing-channel {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.5rem;
+    letter-spacing: 2px;
+    color: var(--accent);
+    margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  #now-playing-title {
+    font-size: 0.72rem;
+    color: var(--text);
+    line-height: 1.4;
+    margin-bottom: 14px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  /* YouTube iframe — hidden visually, audio still plays */
+  #yt-player {
+    width: 100%;
+    aspect-ratio: 16/9;
+    border: none;
+    border-radius: var(--radius);
+    background: #000;
+    display: block;
+  }
+
+  /* ── Controls ── */
+  #controls {
+    display: flex;
+    gap: 10px;
+    margin-top: 14px;
+  }
+  button {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    color: var(--text);
+    cursor: pointer;
+    padding: 10px 14px;
+    flex: 1;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  button:active { background: #1a1a1a; }
+  button.primary {
+    background: var(--accent);
+    color: #000;
+    border-color: var(--accent);
+    font-weight: bold;
+  }
+  button.primary:active { background: #c8df30; }
+  button:disabled { opacity: 0.3; pointer-events: none; }
+
+  /* ── Queue ── */
+  #queue-section { flex: 1; overflow-y: auto; padding: 0 20px 100px; }
+  #queue-header {
+    font-size: 0.6rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 14px 0 8px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 4px;
+    position: sticky;
+    top: 0;
+    background: var(--bg);
+  }
+
+  .queue-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: opacity 0.15s;
+  }
+  .queue-item:active { opacity: 0.6; }
+  .queue-item.active { border-left: 2px solid var(--accent); padding-left: 10px; }
+  .queue-item.played { opacity: 0.35; }
+
+  .queue-num {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.2rem;
+    color: var(--muted);
+    min-width: 24px;
+    line-height: 1;
+    margin-top: 1px;
+  }
+  .queue-item.active .queue-num { color: var(--accent); }
+
+  .queue-info { flex: 1; min-width: 0; }
+  .queue-channel {
+    font-size: 0.65rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 2px;
+  }
+  .queue-title {
+    font-size: 0.72rem;
+    color: var(--text);
+    line-height: 1.35;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .queue-age {
+    font-size: 0.6rem;
+    color: var(--muted);
+    margin-top: 3px;
+  }
+
+  /* ── Empty / error states ── */
+  #empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--muted);
+    font-size: 0.7rem;
+    line-height: 2;
+    letter-spacing: 1px;
+  }
+  #empty-state strong { color: var(--accent); display: block; font-size: 1.1rem; letter-spacing: 2px; margin-bottom: 8px; }
+
+  /* ── Floating load button ── */
+  #load-btn-wrap {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+  }
+  #load-btn-wrap button {
+    padding: 14px 28px;
+    font-size: 0.75rem;
+    letter-spacing: 2px;
+    box-shadow: 0 4px 24px rgba(232,255,71,0.25);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>JogCast</h1>
+  <span>YouTube Queue</span>
+</header>
+
+<div id="status-bar"><div class="dot"></div><span id="status-text">Ready — load channels to begin</span></div>
+
+<div id="player-section">
+  <div id="now-playing-label">Now Playing</div>
+  <div id="now-playing-channel">—</div>
+  <div id="now-playing-title">No video loaded</div>
+  <iframe id="yt-player"
+    src="about:blank"
+    allow="autoplay; encrypted-media"
+    allowfullscreen>
+  </iframe>
+  <div id="controls">
+    <button id="btn-prev" disabled onclick="playIndex(currentIndex - 1)">◀ Prev</button>
+    <button id="btn-next" disabled onclick="playIndex(currentIndex + 1)">Next ▶</button>
+  </div>
+</div>
+
+<div id="queue-section">
+  <div id="queue-header">Up Next</div>
+  <div id="queue-list">
+    <div id="empty-state">
+      <strong>No Queue Loaded</strong>
+      Tap "Load Channels" below<br>
+      to fetch the latest video<br>
+      from each channel.
+    </div>
+  </div>
+</div>
+
+<div id="load-btn-wrap">
+  <button class="primary" id="btn-load" onclick="loadChannels()">⟳ Load Channels</button>
+</div>
+
+<script>
+// ─────────────────────────────────────────────
+// CONFIG — path to your channels.json file.
+// On Android, place channels.json in the same
+// folder as this HTML file. If loading locally
+// via file://, both files must be in the same
+// directory. Alternatively, host both files on
+// a local server or GitHub Pages.
+// ─────────────────────────────────────────────
+const CHANNELS_JSON = 'channels.json';
+
+// RSS-to-JSON proxy (free tier, no key needed)
+const RSS2JSON = 'https://api.rss2json.com/v1/api.json?rss_url=';
+
+// ─────────────────────────────────────────────
+
+let queue = [];          // [{channelName, videoId, title, pubDate}, ...]
+let currentIndex = -1;
+
+// YouTube iframe API auto-advance
+let ytPlayer = null;
+let ytReady = false;
+let pendingVideoId = null;
+
+// Load YouTube IFrame API
+const tag = document.createElement('script');
+tag.src = 'https://www.youtube.com/iframe_api';
+document.head.appendChild(tag);
+
+window.onYouTubeIframeAPIReady = function() {
+  ytReady = true;
+  ytPlayer = new YT.Player('yt-player', {
+    height: '100%',
+    width: '100%',
+    playerVars: { autoplay: 1, playsinline: 1, rel: 0, modestbranding: 1 },
+    events: {
+      onStateChange: onPlayerStateChange,
+      onReady: () => {
+        if (pendingVideoId) {
+          ytPlayer.loadVideoById(pendingVideoId);
+          pendingVideoId = null;
+        }
+      }
+    }
+  });
+};
+
+function onPlayerStateChange(event) {
+  if (event.data === YT.PlayerState.ENDED) {
+    // Auto-advance to next
+    if (currentIndex < queue.length - 1) {
+      playIndex(currentIndex + 1);
+    } else {
+      setStatus('idle', 'Queue complete');
+    }
+  }
+}
+
+// ── Fetch channels & build queue ──────────────
+async function loadChannels() {
+  setStatus('loading', 'Loading channel list…');
+  document.getElementById('btn-load').disabled = true;
+
+  let channels;
+  try {
+    const r = await fetch(CHANNELS_JSON + '?_=' + Date.now());
+    if (!r.ok) throw new Error('Could not load channels.json');
+    channels = await r.json();
+  } catch(e) {
+    setStatus('error', 'Cannot load channels.json — ' + e.message);
+    document.getElementById('btn-load').disabled = false;
+    return;
+  }
+
+  queue = [];
+  const results = await Promise.allSettled(channels.map(fetchLatest));
+  results.forEach((r, i) => {
+    if (r.status === 'fulfilled' && r.value) queue.push(r.value);
+    else console.warn('Failed:', channels[i]?.name, r.reason);
+  });
+
+  document.getElementById('btn-load').disabled = false;
+
+  if (queue.length === 0) {
+    setStatus('error', 'No videos fetched — check channel IDs');
+    return;
+  }
+
+  renderQueue();
+  setStatus('idle', `${queue.length} videos queued — tap Next to start`);
+  document.getElementById('btn-next').disabled = false;
+  document.getElementById('btn-prev').disabled = true;
+
+  // Auto-start first video
+  playIndex(0);
+}
+
+async function fetchLatest(channel) {
+  const feedUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${channel.channelId}`;
+  const url = RSS2JSON + encodeURIComponent(feedUrl);
+  const r = await fetch(url);
+  const data = await r.json();
+  if (data.status !== 'ok' || !data.items?.length) throw new Error('Bad feed');
+  const item = data.items[0];
+  const videoId = extractVideoId(item.link || item.guid);
+  if (!videoId) throw new Error('No video ID');
+  return {
+    channelName: channel.name,
+    videoId,
+    title: item.title,
+    pubDate: item.pubDate
+  };
+}
+
+function extractVideoId(url) {
+  if (!url) return null;
+  const m = url.match(/(?:v=|youtu\.be\/|\/embed\/)([A-Za-z0-9_-]{11})/);
+  return m ? m[1] : null;
+}
+
+// ── Playback ──────────────────────────────────
+function playIndex(idx) {
+  if (idx < 0 || idx >= queue.length) return;
+  currentIndex = idx;
+  const item = queue[idx];
+
+  document.getElementById('now-playing-channel').textContent = item.channelName;
+  document.getElementById('now-playing-title').textContent = item.title;
+  document.getElementById('btn-prev').disabled = (idx === 0);
+  document.getElementById('btn-next').disabled = (idx === queue.length - 1);
+
+  setStatus('playing', `Playing ${idx + 1} of ${queue.length} — ${item.channelName}`);
+
+  if (ytReady && ytPlayer?.loadVideoById) {
+    ytPlayer.loadVideoById(item.videoId);
+  } else {
+    pendingVideoId = item.videoId;
+  }
+
+  renderQueue();
+  // Scroll active item into view
+  setTimeout(() => {
+    const el = document.querySelector('.queue-item.active');
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }, 100);
+}
+
+// ── Queue render ──────────────────────────────
+function renderQueue() {
+  const list = document.getElementById('queue-list');
+  if (queue.length === 0) {
+    list.innerHTML = `<div id="empty-state"><strong>No Queue Loaded</strong>Tap "Load Channels" below<br>to fetch the latest video<br>from each channel.</div>`;
+    return;
+  }
+  list.innerHTML = queue.map((item, i) => `
+    <div class="queue-item ${i === currentIndex ? 'active' : ''} ${i < currentIndex ? 'played' : ''}"
+         onclick="playIndex(${i})">
+      <div class="queue-num">${i + 1}</div>
+      <div class="queue-info">
+        <div class="queue-channel">${esc(item.channelName)}</div>
+        <div class="queue-title">${esc(item.title)}</div>
+        <div class="queue-age">${timeAgo(item.pubDate)}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ── Helpers ───────────────────────────────────
+function setStatus(type, msg) {
+  const bar = document.getElementById('status-bar');
+  bar.className = type;
+  document.getElementById('status-text').textContent = msg;
+}
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function timeAgo(dateStr) {
+  if (!dateStr) return '';
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const h = Math.floor(diff / 36e5);
+  if (h < 1) return 'just now';
+  if (h < 24) return `${h}h ago`;
+  const d = Math.floor(h / 24);
+  if (d < 7) return `${d}d ago`;
+  return `${Math.floor(d/7)}w ago`;
+}
+</script>
+</body>
+</html>
