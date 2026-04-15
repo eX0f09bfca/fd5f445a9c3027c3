@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
 <title>JogCast</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&display=swap');
@@ -30,7 +30,6 @@
     overflow-x: hidden;
   }
 
-  /* ── Header ── */
   header {
     padding: 18px 20px 12px;
     border-bottom: 1px solid var(--border);
@@ -52,7 +51,6 @@
     text-transform: uppercase;
   }
 
-  /* ── Status bar ── */
   #status-bar {
     padding: 8px 20px;
     font-size: 0.65rem;
@@ -66,21 +64,21 @@
     gap: 8px;
   }
   #status-bar .dot {
-    width: 6px; height: 6px;
+    width: 6px;
+    height: 6px;
     border-radius: 50%;
     background: var(--muted);
     flex-shrink: 0;
   }
   #status-bar.loading .dot { background: var(--accent); animation: pulse 1s infinite; }
   #status-bar.playing .dot { background: var(--accent); }
-  #status-bar.error .dot  { background: var(--accent2); }
+  #status-bar.error .dot { background: var(--accent2); }
 
   @keyframes pulse {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.2; }
   }
 
-  /* ── Player ── */
   #player-section {
     padding: 16px 20px;
     border-bottom: 1px solid var(--border);
@@ -113,17 +111,14 @@
     overflow: hidden;
   }
 
-  /* YouTube iframe — hidden visually, audio still plays */
   #yt-player {
     width: 100%;
-    aspect-ratio: 16/9;
-    border: none;
+    aspect-ratio: 16 / 9;
     border-radius: var(--radius);
     background: #000;
-    display: block;
+    overflow: hidden;
   }
 
-  /* ── Controls ── */
   #controls {
     display: flex;
     gap: 10px;
@@ -154,8 +149,11 @@
   button.primary:active { background: #c8df30; }
   button:disabled { opacity: 0.3; pointer-events: none; }
 
-  /* ── Queue ── */
-  #queue-section { flex: 1; overflow-y: auto; padding: 0 20px 100px; }
+  #queue-section {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 20px 100px;
+  }
   #queue-header {
     font-size: 0.6rem;
     letter-spacing: 2px;
@@ -193,7 +191,10 @@
   }
   .queue-item.active .queue-num { color: var(--accent); }
 
-  .queue-info { flex: 1; min-width: 0; }
+  .queue-info {
+    flex: 1;
+    min-width: 0;
+  }
   .queue-channel {
     font-size: 0.65rem;
     letter-spacing: 1px;
@@ -215,7 +216,6 @@
     margin-top: 3px;
   }
 
-  /* ── Empty / error states ── */
   #empty-state {
     text-align: center;
     padding: 40px 20px;
@@ -224,9 +224,14 @@
     line-height: 2;
     letter-spacing: 1px;
   }
-  #empty-state strong { color: var(--accent); display: block; font-size: 1.1rem; letter-spacing: 2px; margin-bottom: 8px; }
+  #empty-state strong {
+    color: var(--accent);
+    display: block;
+    font-size: 1.1rem;
+    letter-spacing: 2px;
+    margin-bottom: 8px;
+  }
 
-  /* ── Floating load button ── */
   #load-btn-wrap {
     position: fixed;
     bottom: 24px;
@@ -246,10 +251,13 @@
 
 <header>
   <h1>JogCast</h1>
-  <span>YouTube Queue</span>
+  <span>A Real Simple QueueTube Player</span>
 </header>
 
-<div id="status-bar"><div class="dot"></div><span id="status-text">Ready — load channels to begin</span></div>
+<div id="status-bar">
+  <div class="dot"></div>
+  <span id="status-text">Ready — load channels to begin</span>
+</div>
 
 <div id="player-section">
   <div id="now-playing-label">Now Playing</div>
@@ -257,8 +265,8 @@
   <div id="now-playing-title">No video loaded</div>
   <div id="yt-player"></div>
   <div id="controls">
-    <button id="btn-prev" disabled onclick="playIndex(currentIndex - 1)">◀ Prev</button>
-    <button id="btn-next" disabled onclick="playIndex(currentIndex + 1)">Next ▶</button>
+    <button id="btn-prev" disabled>◀ Prev</button>
+    <button id="btn-next" disabled>Next ▶</button>
   </div>
 </div>
 
@@ -267,213 +275,320 @@
   <div id="queue-list">
     <div id="empty-state">
       <strong>No Queue Loaded</strong>
-      Tap "Load Channels" below<br>
-      to fetch the latest video<br>
+      Tap "Load Channels" below<br />
+      to fetch the latest video<br />
       from each channel.
     </div>
   </div>
 </div>
 
 <div id="load-btn-wrap">
-  <button class="primary" id="btn-load" onclick="loadChannels()">⟳ Load Channels</button>
+  <button class="primary" id="btn-load">⟳ Load Channels</button>
 </div>
 
 <script>
-// ─────────────────────────────────────────────
-// CONFIG — path to your channels.json file.
-// On Android, place channels.json in the same
-// folder as this HTML file. If loading locally
-// via file://, both files must be in the same
-// directory. Alternatively, host both files on
-// a local server or GitHub Pages.
-// ─────────────────────────────────────────────
-const CHANNELS_JSON = 'channels.json';
+  const CHANNELS_JSON = 'channels.json';
+  const RSS2JSON = 'https://api.rss2json.com/v1/api.json?rss_url=';
 
-// RSS-to-JSON proxy (free tier, no key needed)
-const RSS2JSON = 'https://api.rss2json.com/v1/api.json?rss_url=';
+  let queue = [];
+  let currentIndex = -1;
 
-// ─────────────────────────────────────────────
+  let ytPlayer = null;
+  let playerReady = false;
+  let pendingVideoId = null;
+  let apiScriptLoaded = false;
 
-let queue = [];          // [{channelName, videoId, title, pubDate}, ...]
-let currentIndex = -1;
+  const btnLoad = document.getElementById('btn-load');
+  const btnPrev = document.getElementById('btn-prev');
+  const btnNext = document.getElementById('btn-next');
 
-// YouTube iframe API auto-advance
-let ytPlayer = null;
-let playerReady = false;
-let pendingVideoId = null;
+  btnLoad.addEventListener('click', loadChannels);
+  btnPrev.addEventListener('click', () => playIndex(currentIndex - 1));
+  btnNext.addEventListener('click', () => playIndex(currentIndex + 1));
 
-window.onYouTubeIframeAPIReady = function() {
-  ytPlayer = new YT.Player('yt-player', {
-    width: '100%',
-    height: '100%',
-    playerVars: {
-      autoplay: 1,
-      playsinline: 1,
-      rel: 0
-    },
-    events: {
-      onReady: () => {
-        playerReady = true;
-        setStatus('idle', 'Player ready — tap Next to play');
-        if (pendingVideoId) {
-          ytPlayer.loadVideoById(pendingVideoId);
-          pendingVideoId = null;
+  loadYouTubeApi();
+
+  function loadYouTubeApi() {
+    if (window.YT && window.YT.Player) {
+      createPlayer();
+      return;
+    }
+
+    if (apiScriptLoaded) return;
+    apiScriptLoaded = true;
+
+    const tag = document.createElement('script');
+    tag.src = 'https://www.youtube.com/iframe_api';
+    tag.onerror = () => {
+      setStatus('error', 'Could not load YouTube API');
+    };
+    document.head.appendChild(tag);
+
+    window.onYouTubeIframeAPIReady = () => {
+      createPlayer();
+    };
+  }
+
+  function createPlayer() {
+    if (ytPlayer) return;
+
+    setStatus('loading', 'Initializing player…');
+
+    ytPlayer = new YT.Player('yt-player', {
+      width: '100%',
+      height: '100%',
+      videoId: '',
+      playerVars: {
+        autoplay: 1,
+        playsinline: 1,
+        rel: 0,
+        modestbranding: 1
+      },
+      events: {
+        onReady: onPlayerReady,
+        onStateChange: onPlayerStateChange,
+        onError: onPlayerError,
+        onAutoplayBlocked: onAutoplayBlocked
+      }
+    });
+  }
+
+  function onPlayerReady() {
+    playerReady = true;
+    if (pendingVideoId) {
+      const vid = pendingVideoId;
+      pendingVideoId = null;
+      setStatus('loading', 'Starting video…');
+      ytPlayer.loadVideoById(vid);
+    } else {
+      setStatus('idle', 'Player ready — load channels to begin');
+    }
+  }
+
+  function onPlayerStateChange(event) {
+    if (!window.YT || !window.YT.PlayerState) return;
+
+    switch (event.data) {
+      case YT.PlayerState.UNSTARTED:
+        setStatus('idle', 'Video queued');
+        break;
+      case YT.PlayerState.ENDED:
+        if (currentIndex < queue.length - 1) {
+          playIndex(currentIndex + 1);
+        } else {
+          setStatus('idle', 'Queue complete');
         }
-      },
-      onStateChange: onPlayerStateChange,
-      onAutoplayBlocked: () => {
-        setStatus('error', 'Playback blocked — tap the player, then tap Next');
-      },
-      onError: (event) => {
-        setStatus('error', `YouTube player error: ${event.data}`);
+        break;
+      case YT.PlayerState.PLAYING:
+        if (currentIndex >= 0 && currentIndex < queue.length) {
+          setStatus('playing', `Playing ${currentIndex + 1} of ${queue.length} — ${queue[currentIndex].channelName}`);
+        } else {
+          setStatus('playing', 'Playing');
+        }
+        break;
+      case YT.PlayerState.PAUSED:
+        setStatus('idle', 'Paused');
+        break;
+      case YT.PlayerState.BUFFERING:
+        setStatus('loading', 'Buffering…');
+        break;
+      case YT.PlayerState.CUED:
+        setStatus('idle', 'Ready to play');
+        break;
+    }
+  }
+
+  function onPlayerError(event) {
+    const code = event?.data;
+    let msg = `YouTube error ${code}`;
+
+    if (code === 2) msg = 'YouTube error 2 — invalid video ID';
+    if (code === 5) msg = 'YouTube error 5 — HTML5 playback issue';
+    if (code === 100) msg = 'Video unavailable';
+    if (code === 101 || code === 150) msg = 'Video cannot be played in embedded player';
+
+    setStatus('error', msg);
+  }
+
+  function onAutoplayBlocked() {
+    setStatus('error', 'Autoplay blocked — tap the video area, then tap Next');
+  }
+
+  async function loadChannels() {
+    setStatus('loading', 'Loading channel list…');
+    btnLoad.disabled = true;
+    btnNext.disabled = true;
+    btnPrev.disabled = true;
+
+    let channels;
+    try {
+      const r = await fetch(CHANNELS_JSON + '?_=' + Date.now(), { cache: 'no-store' });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      channels = await r.json();
+      if (!Array.isArray(channels)) throw new Error('channels.json is not an array');
+    } catch (e) {
+      setStatus('error', 'Cannot load channels.json — ' + e.message);
+      btnLoad.disabled = false;
+      return;
+    }
+
+    queue = [];
+    currentIndex = -1;
+    renderQueue();
+
+    const results = await Promise.allSettled(channels.map(fetchLatest));
+
+    for (let i = 0; i < results.length; i++) {
+      const r = results[i];
+      if (r.status === 'fulfilled' && r.value) {
+        queue.push(r.value);
+      } else {
+        console.warn('Failed channel:', channels[i]?.name, r.reason || r);
       }
     }
-  });
-};
 
-function onPlayerStateChange(event) {
-  if (event.data === YT.PlayerState.ENDED) {
-    // Auto-advance to next
-    if (currentIndex < queue.length - 1) {
-      playIndex(currentIndex + 1);
-    } else {
-      setStatus('idle', 'Queue complete');
+    btnLoad.disabled = false;
+
+    if (queue.length === 0) {
+      setStatus('error', 'No videos fetched — check channel IDs');
+      renderQueue();
+      return;
     }
-  }
-}
 
-// ── Fetch channels & build queue ──────────────
-async function loadChannels() {
-  setStatus('loading', 'Loading channel list…');
-  document.getElementById('btn-load').disabled = true;
-
-  let channels;
-  try {
-    const r = await fetch(CHANNELS_JSON + '?_=' + Date.now());
-    if (!r.ok) throw new Error('Could not load channels.json');
-    channels = await r.json();
-  } catch(e) {
-    setStatus('error', 'Cannot load channels.json — ' + e.message);
-    document.getElementById('btn-load').disabled = false;
-    return;
+    renderQueue();
+    btnNext.disabled = false;
+    btnPrev.disabled = true;
+    setStatus('idle', `${queue.length} videos queued — tap Next or a queue item to start`);
   }
 
-  queue = [];
-  const results = await Promise.allSettled(channels.map(fetchLatest));
-  results.forEach((r, i) => {
-    if (r.status === 'fulfilled' && r.value) queue.push(r.value);
-    else console.warn('Failed:', channels[i]?.name, r.reason);
-  });
+  async function fetchLatest(channel) {
+    const feedUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${encodeURIComponent(channel.channelId)}`;
+    const url = RSS2JSON + encodeURIComponent(feedUrl);
 
-  document.getElementById('btn-load').disabled = false;
+    const r = await fetch(url, { cache: 'no-store' });
+    if (!r.ok) throw new Error(`RSS request failed: HTTP ${r.status}`);
 
-  if (queue.length === 0) {
-    setStatus('error', 'No videos fetched — check channel IDs');
-    return;
+    const data = await r.json();
+    if (data.status !== 'ok' || !Array.isArray(data.items) || !data.items.length) {
+      throw new Error('Bad or empty feed');
+    }
+
+    const item = data.items[0];
+    const videoId = extractVideoId(item.link || item.guid);
+    if (!videoId) throw new Error('No video ID found');
+
+    return {
+      channelName: channel.name,
+      videoId,
+      title: item.title || 'Untitled',
+      pubDate: item.pubDate || ''
+    };
   }
 
-  renderQueue();
-  setStatus('idle', `${queue.length} videos queued — tap Next to start`);
-  document.getElementById('btn-next').disabled = false;
-  document.getElementById('btn-prev').disabled = true;
-
-  // Auto-start first video
-  //playIndex(0);
-}
-
-async function fetchLatest(channel) {
-  const feedUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${channel.channelId}`;
-  const url = RSS2JSON + encodeURIComponent(feedUrl);
-  const r = await fetch(url);
-  const data = await r.json();
-  if (data.status !== 'ok' || !data.items?.length) throw new Error('Bad feed');
-  const item = data.items[0];
-  const videoId = extractVideoId(item.link || item.guid);
-  if (!videoId) throw new Error('No video ID');
-  return {
-    channelName: channel.name,
-    videoId,
-    title: item.title,
-    pubDate: item.pubDate
-  };
-}
-
-function extractVideoId(url) {
-  if (!url) return null;
-  const m = url.match(/(?:v=|youtu\.be\/|\/embed\/)([A-Za-z0-9_-]{11})/);
-  return m ? m[1] : null;
-}
-
-// ── Playback ──────────────────────────────────
-function playIndex(idx) {
-  if (idx < 0 || idx >= queue.length) return;
-  currentIndex = idx;
-  const item = queue[idx];
-
-  document.getElementById('now-playing-channel').textContent = item.channelName;
-  document.getElementById('now-playing-title').textContent = item.title;
-  document.getElementById('btn-prev').disabled = (idx === 0);
-  document.getElementById('btn-next').disabled = (idx === queue.length - 1);
-
-  setStatus('playing', `Playing ${idx + 1} of ${queue.length} — ${item.channelName}`);
-
-  if (!playerReady || !ytPlayer?.loadVideoById) {
-    pendingVideoId = item.videoId;
-    setStatus('loading', 'Initializing player…');
-    return;
+  function extractVideoId(url) {
+    if (!url) return null;
+    const m = String(url).match(/(?:v=|youtu\.be\/|\/embed\/)([A-Za-z0-9_-]{11})/);
+    return m ? m[1] : null;
   }
 
-  ytPlayer.loadVideoById(item.videoId);
+  function playIndex(idx) {
+    if (idx < 0 || idx >= queue.length) return;
 
-  renderQueue();
-  // Scroll active item into view
-  setTimeout(() => {
-    const el = document.querySelector('.queue-item.active');
-    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  }, 100);
-}
+    currentIndex = idx;
+    const item = queue[idx];
 
-// ── Queue render ──────────────────────────────
-function renderQueue() {
-  const list = document.getElementById('queue-list');
-  if (queue.length === 0) {
-    list.innerHTML = `<div id="empty-state"><strong>No Queue Loaded</strong>Tap "Load Channels" below<br>to fetch the latest video<br>from each channel.</div>`;
-    return;
+    document.getElementById('now-playing-channel').textContent = item.channelName;
+    document.getElementById('now-playing-title').textContent = item.title;
+
+    btnPrev.disabled = (idx === 0);
+    btnNext.disabled = (idx === queue.length - 1);
+
+    renderQueue();
+
+    if (!ytPlayer) {
+      pendingVideoId = item.videoId;
+      createPlayer();
+      return;
+    }
+
+    if (!playerReady) {
+      pendingVideoId = item.videoId;
+      setStatus('loading', 'Initializing player…');
+      return;
+    }
+
+    setStatus('loading', `Starting ${idx + 1} of ${queue.length} — ${item.channelName}`);
+    ytPlayer.loadVideoById(item.videoId);
+
+    setTimeout(() => {
+      const el = document.querySelector('.queue-item.active');
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 100);
   }
-  list.innerHTML = queue.map((item, i) => `
-    <div class="queue-item ${i === currentIndex ? 'active' : ''} ${i < currentIndex ? 'played' : ''}"
-         onclick="playIndex(${i})">
-      <div class="queue-num">${i + 1}</div>
-      <div class="queue-info">
-        <div class="queue-channel">${esc(item.channelName)}</div>
-        <div class="queue-title">${esc(item.title)}</div>
-        <div class="queue-age">${timeAgo(item.pubDate)}</div>
+
+  function renderQueue() {
+    const list = document.getElementById('queue-list');
+
+    if (queue.length === 0) {
+      list.innerHTML = `
+        <div id="empty-state">
+          <strong>No Queue Loaded</strong>
+          Tap "Load Channels" below<br />
+          to fetch the latest video<br />
+          from each channel.
+        </div>
+      `;
+      return;
+    }
+
+    list.innerHTML = queue.map((item, i) => `
+      <div class="queue-item ${i === currentIndex ? 'active' : ''} ${i < currentIndex ? 'played' : ''}" data-index="${i}">
+        <div class="queue-num">${i + 1}</div>
+        <div class="queue-info">
+          <div class="queue-channel">${esc(item.channelName)}</div>
+          <div class="queue-title">${esc(item.title)}</div>
+          <div class="queue-age">${timeAgo(item.pubDate)}</div>
+        </div>
       </div>
-    </div>
-  `).join('');
-}
+    `).join('');
 
-// ── Helpers ───────────────────────────────────
-function setStatus(type, msg) {
-  const bar = document.getElementById('status-bar');
-  bar.className = type;
-  document.getElementById('status-text').textContent = msg;
-}
+    list.querySelectorAll('.queue-item').forEach(el => {
+      el.addEventListener('click', () => {
+        const idx = Number(el.getAttribute('data-index'));
+        playIndex(idx);
+      });
+    });
+  }
 
-function esc(s) {
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
+  function setStatus(type, msg) {
+    const bar = document.getElementById('status-bar');
+    bar.className = type;
+    document.getElementById('status-text').textContent = msg;
+  }
 
-function timeAgo(dateStr) {
-  if (!dateStr) return '';
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const h = Math.floor(diff / 36e5);
-  if (h < 1) return 'just now';
-  if (h < 24) return `${h}h ago`;
-  const d = Math.floor(h / 24);
-  if (d < 7) return `${d}d ago`;
-  return `${Math.floor(d/7)}w ago`;
-}
+  function esc(s) {
+    return String(s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+
+  function timeAgo(dateStr) {
+    if (!dateStr) return '';
+    const then = new Date(dateStr).getTime();
+    if (Number.isNaN(then)) return '';
+
+    const diff = Date.now() - then;
+    const h = Math.floor(diff / 36e5);
+
+    if (h < 1) return 'just now';
+    if (h < 24) return `${h}h ago`;
+
+    const d = Math.floor(h / 24);
+    if (d < 7) return `${d}d ago`;
+
+    return `${Math.floor(d / 7)}w ago`;
+  }
 </script>
 </body>
 </html>
