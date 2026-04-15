@@ -303,7 +303,8 @@ let currentIndex = -1;
 
 // YouTube iframe API auto-advance
 let ytPlayer = null;
-let ytReady = false;
+let apiReady = false;
+let playerReady = false;
 let pendingVideoId = null;
 
 // Load YouTube IFrame API
@@ -312,18 +313,27 @@ tag.src = 'https://www.youtube.com/iframe_api';
 document.head.appendChild(tag);
 
 window.onYouTubeIframeAPIReady = function() {
-  ytReady = true;
+  apiReady = true;
   ytPlayer = new YT.Player('yt-player', {
     height: '100%',
     width: '100%',
-    playerVars: { autoplay: 1, playsinline: 1, rel: 0, modestbranding: 1 },
+    playerVars: {
+      autoplay: 1,
+      playsinline: 1,
+      rel: 0,
+      modestbranding: 1
+    },
     events: {
-      onStateChange: onPlayerStateChange,
       onReady: () => {
-        if (pendingVideoId) {
-          ytPlayer.loadVideoById(pendingVideoId);
-          pendingVideoId = null;
-        }
+        playerReady = true;
+        setStatus('idle', 'Player ready — tap a queue item or Next to play');
+      },
+      onStateChange: onPlayerStateChange,
+      onAutoplayBlocked: () => {
+        setStatus('error', 'Playback blocked — tap the player once, then tap Next again');
+      },
+      onError: (event) => {
+        setStatus('error', `YouTube player error: ${event.data}`);
       }
     }
   });
@@ -376,7 +386,7 @@ async function loadChannels() {
   document.getElementById('btn-prev').disabled = true;
 
   // Auto-start first video
-  playIndex(0);
+  //playIndex(0);
 }
 
 async function fetchLatest(channel) {
@@ -415,11 +425,13 @@ function playIndex(idx) {
 
   setStatus('playing', `Playing ${idx + 1} of ${queue.length} — ${item.channelName}`);
 
-  if (ytReady && ytPlayer?.loadVideoById) {
-    ytPlayer.loadVideoById(item.videoId);
-  } else {
+  if (!playerReady || !ytPlayer?.loadVideoById) {
     pendingVideoId = item.videoId;
+    setStatus('loading', 'Player still initializing — tap again in a moment');
+    return;
   }
+
+  ytPlayer.loadVideoById(item.videoId);
 
   renderQueue();
   // Scroll active item into view
