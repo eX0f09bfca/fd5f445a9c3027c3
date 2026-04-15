@@ -255,11 +255,7 @@
   <div id="now-playing-label">Now Playing</div>
   <div id="now-playing-channel">—</div>
   <div id="now-playing-title">No video loaded</div>
-  <iframe id="yt-player"
-    src="about:blank"
-    allow="autoplay; encrypted-media"
-    allowfullscreen>
-  </iframe>
+  <div id="yt-player"></div>
   <div id="controls">
     <button id="btn-prev" disabled onclick="playIndex(currentIndex - 1)">◀ Prev</button>
     <button id="btn-next" disabled onclick="playIndex(currentIndex + 1)">Next ▶</button>
@@ -303,34 +299,30 @@ let currentIndex = -1;
 
 // YouTube iframe API auto-advance
 let ytPlayer = null;
-let apiReady = false;
 let playerReady = false;
 let pendingVideoId = null;
 
-// Load YouTube IFrame API
-const tag = document.createElement('script');
-tag.src = 'https://www.youtube.com/iframe_api';
-document.head.appendChild(tag);
-
 window.onYouTubeIframeAPIReady = function() {
-  apiReady = true;
   ytPlayer = new YT.Player('yt-player', {
-    height: '100%',
     width: '100%',
+    height: '100%',
     playerVars: {
       autoplay: 1,
       playsinline: 1,
-      rel: 0,
-      modestbranding: 1
+      rel: 0
     },
     events: {
       onReady: () => {
         playerReady = true;
-        setStatus('idle', 'Player ready — tap a queue item or Next to play');
+        setStatus('idle', 'Player ready — tap Next to play');
+        if (pendingVideoId) {
+          ytPlayer.loadVideoById(pendingVideoId);
+          pendingVideoId = null;
+        }
       },
       onStateChange: onPlayerStateChange,
       onAutoplayBlocked: () => {
-        setStatus('error', 'Playback blocked — tap the player once, then tap Next again');
+        setStatus('error', 'Playback blocked — tap the player, then tap Next');
       },
       onError: (event) => {
         setStatus('error', `YouTube player error: ${event.data}`);
@@ -427,7 +419,7 @@ function playIndex(idx) {
 
   if (!playerReady || !ytPlayer?.loadVideoById) {
     pendingVideoId = item.videoId;
-    setStatus('loading', 'Player still initializing — tap again in a moment');
+    setStatus('loading', 'Initializing player…');
     return;
   }
 
