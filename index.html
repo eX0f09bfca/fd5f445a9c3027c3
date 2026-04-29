@@ -450,7 +450,7 @@
     btnLoad.disabled = false;
 
     if (queue.length === 0) {
-      setStatus('error', 'No videos fetched — check channel IDs');
+      setStatus('error', 'No videos fetched — YouTube/RSS2JSON feed issue likely');
       renderQueue();
       return;
     }
@@ -464,19 +464,36 @@
   async function fetchLatest(channel) {
     const feedUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${encodeURIComponent(channel.channelId)}`;
     const url = RSS2JSON + encodeURIComponent(feedUrl);
-
+  
     const r = await fetch(url, { cache: 'no-store' });
-    if (!r.ok) throw new Error(`RSS request failed: HTTP ${r.status}`);
-
-    const data = await r.json();
-    if (data.status !== 'ok' || !Array.isArray(data.items) || !data.items.length) {
+    const text = await r.text();
+  
+    if (!r.ok) {
+      throw new Error(`RSS2JSON HTTP ${r.status}: ${text.slice(0, 120)}`);
+    }
+  
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      throw new Error(`RSS2JSON returned non-JSON: ${text.slice(0, 120)}`);
+    }
+  
+    if (data.status !== 'ok') {
+      throw new Error(`RSS2JSON status ${data.status}: ${data.message || 'unknown error'}`);
+    }
+  
+    if (!Array.isArray(data.items) || data.items.length === 0) {
       throw new Error('Bad or empty feed');
     }
-
+  
     const item = data.items[0];
     const videoId = extractVideoId(item.link || item.guid);
-    if (!videoId) throw new Error('No video ID found');
-
+  
+    if (!videoId) {
+      throw new Error(`No video ID found in ${item.link || item.guid || 'empty link/guid'}`);
+    }
+  
     return {
       channelName: channel.name,
       videoId,
